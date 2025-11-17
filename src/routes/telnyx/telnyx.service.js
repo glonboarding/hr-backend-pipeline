@@ -12,13 +12,16 @@ async function processTelnyxEvent(body) {
 }
 
 async function insertInboundSMS(payload) {
+  const phoneNumber = payload.from.phone_number;
+  const direction = phoneNumber === '+12014222696' ? 'outbound' : 'inbound';
+  
   const { data, error } = await supabase
     .from('frontend_sms')
     .insert([
       {
-        number: payload.from.phone_number,
+        number: phoneNumber,
         message: payload.text,
-        direction: 'inbound',
+        direction: direction,
         cost: payload?.cost_breakdown?.carrier_fee?.amount,
         seen: false,
       }
