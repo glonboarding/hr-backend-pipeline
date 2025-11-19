@@ -1,0 +1,7 @@
+{
+  "to": "recipient@example.com",
+  "Subject": "Reminder: Zoom Meeting in 24 Hours",
+  "from": "noreply@reminders.glonboarding.com",
+  "body": "<h2>Reminder: Zoom Meeting in 24 Hours</h2><p>You have a meeting scheduled:</p><ul><li><strong>Title:</strong> Team Standup Meeting</li><li><strong>Time:</strong> January 15, 2024 at 2:00 PM</li><li><strong>Duration:</strong> 30 minutes</li><li><strong>Organizer:</strong> John Doe</li></ul><p><a href='https://zoom.us/j/123456789'>Join Zoom Meeting</a></p><p>Meeting ID: 123 456 789<br>Password: password123</p>"
+}
+

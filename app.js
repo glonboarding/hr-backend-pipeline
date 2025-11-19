@@ -4,6 +4,7 @@ const morgan = require('morgan');
 
 // Import routes
 const telnyxRoutes = require('./src/routes/telnyx/telnyx.router');
+const resendEmailRoutes = require('./src/routes/resend/resend.router');
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/telnyx', telnyxRoutes);
 
+app.use('/api/resend/reminders', resendEmailRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
