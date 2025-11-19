@@ -1,3 +1,5 @@
+const { emailQueue } = require('./emailQueue');
+
 // Universal JSON format expected from n8n:
 // {
 //   "to": "email@example.com",
@@ -32,18 +34,11 @@ async function sendReminderEmailService(data) {
     html: data.body,
   };
 
-  // TODO: Initialize Resend client when package is installed
-  // const { Resend } = require('resend');
-  // const resend = new Resend(process.env.RESEND_API_KEY);
-  // const result = await resend.emails.send(emailPayload);
-
-  // For now, return the formatted payload
-  // Replace this with actual Resend API call when package is installed
-  return {
-    message: 'Email formatted successfully',
-    emailPayload,
-    // When Resend is integrated, return: result
-  };
+  // Add email to queue and return a promise
+  // The queue will process emails in FIFO order with rate limiting (2 per second)
+  return new Promise((resolve, reject) => {
+    emailQueue.enqueue(emailPayload, resolve, reject);
+  });
 }
 
 module.exports = { sendReminderEmailService };
