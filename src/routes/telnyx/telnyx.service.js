@@ -60,29 +60,30 @@ async function callGateway(endpoint, body) {
 }
 
 async function sendSMS(payload) {
-  if (!payload || (!payload.message && !payload.text)) {
-    throw new Error('Missing required field: message or text in payload');
+  if (!payload || !payload.to || !payload.from || !payload.text) {
+    throw new Error('Missing required fields: to, from, text');
   }
 
   const gatewayPayload = {
-    to: payload.to || payload.recipient || DEFAULT_FROM,
-    from: payload.from || DEFAULT_FROM,
-    text: payload.text || payload.message,
+    to: payload.to,
+    from: payload.from,
+    text: payload.text,
   };
 
   return callGateway('/sendSMS', gatewayPayload);
 }
 
 async function sendMMS(phoneNumbers, payload) {
-  if (!phoneNumbers || (Array.isArray(phoneNumbers) && phoneNumbers.length === 0)) {
-    throw new Error('Missing required field: phoneNumbers (must be a string or non-empty array)');
+  const to = phoneNumbers ?? payload?.to;
+  if (!to || (Array.isArray(to) && to.length === 0)) {
+    throw new Error('Missing required field: to (must be a string or non-empty array)');
   }
 
-  if (!payload || (!payload.message && !payload.text)) {
-    throw new Error('Missing required field: message or text in payload');
+  if (!payload || !payload.from || !payload.text) {
+    throw new Error('Missing required fields: from, text');
   }
 
-  const toNumbers = Array.isArray(phoneNumbers) ? phoneNumbers : [phoneNumbers];
+  const toNumbers = Array.isArray(to) ? to : [to];
 
   if (!toNumbers.every((num) => typeof num === 'string' && num.trim().length > 0)) {
     throw new Error('All phone numbers must be non-empty strings');
@@ -93,8 +94,8 @@ async function sendMMS(phoneNumbers, payload) {
       try {
         const gatewayPayload = {
           to: phoneNumber.trim(),
-          from: payload.from || DEFAULT_FROM,
-          text: payload.text || payload.message,
+          from: payload.from,
+          text: payload.text,
           mediaUrls: payload.mediaUrls || payload.media_urls || [],
         };
         const data = await callGateway('/sendMMS', gatewayPayload);

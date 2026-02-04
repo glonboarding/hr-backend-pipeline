@@ -14,16 +14,12 @@ async function handleWebhook(req, res) {
 
 async function handleSendSMS(req, res) {
   try {
-    const { payload } = req.body;
+    // Preferred request shape:
+    // { "to": "+1...", "from": "+1...", "text": "..." }
+    // Back-compat: { "payload": { ... } }
+    const body = req.body?.payload ? req.body.payload : req.body;
 
-    if (!payload) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Missing required field: payload',
-      });
-    }
-
-    const result = await sendSMS(payload);
+    const result = await sendSMS(body);
     return res.status(200).json(result);
   } catch (err) {
     console.error('Send SMS error:', err);
@@ -35,23 +31,14 @@ async function handleSendSMS(req, res) {
 
 async function handleSendMMS(req, res) {
   try {
-    const { phoneNumbers, payload } = req.body;
+    // Preferred request shape:
+    // { "to": ["+1..."], "from": "+1...", "text": "...", "mediaUrls": ["https://..."] }
+    // Back-compat: { "phoneNumbers": "...|[...]", "payload": { "from": "...", "message": "...", "media_urls": [...] } }
+    const reqBody = req.body || {};
+    const body = reqBody.payload ? reqBody.payload : reqBody;
+    const to = reqBody.phoneNumbers ?? body.to;
 
-    if (!phoneNumbers) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Missing required field: phoneNumbers',
-      });
-    }
-
-    if (!payload) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Missing required field: payload',
-      });
-    }
-
-    const result = await sendMMS(phoneNumbers, payload);
+    const result = await sendMMS(to, body);
     return res.status(200).json(result);
   } catch (err) {
     console.error('Send MMS error:', err);
