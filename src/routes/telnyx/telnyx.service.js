@@ -1,5 +1,5 @@
 const { supabase } = require('../../config/supabase');
-const { telnyx } = require('../../config/telnyx');
+const { getGatewayConfig } = require('../../config/gateway');
 
 async function processTelnyxEvent(body) {
   const payload = body?.data?.payload;
@@ -33,33 +33,44 @@ async function insertInboundSMS(payload) {
   return data;
 }
 
-// Hardcoded phone numbers
-const SENDING_PHONE_NUMBER = '+12014222696'; // Phone number to send from
-const RECIPIENT_PHONE_NUMBER = '+12014222696'; // Hardcoded recipient phone number for SMS
+const DEFAULT_FROM = '+12014222696';
+
+async function callGateway(endpoint, body) {
+  const { baseUrl, token } = getGatewayConfig();
+  const url = `${baseUrl}${endpoint}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const err = new Error(data.message || data.error || `Gateway returned ${response.status}`);
+    err.status = response.status;
+    err.gatewayResponse = data;
+    throw err;
+  }
+
+  return data;
+}
 
 async function sendSMS(payload) {
-  if (!payload || !payload.message) {
-    throw new Error('Missing required field: message in payload');
+  if (!payload || (!payload.message && !payload.text)) {
+    throw new Error('Missing required field: message or text in payload');
   }
 
-  try {
-    const message = await telnyx.messages.create({
-      from: SENDING_PHONE_NUMBER,
-      to: RECIPIENT_PHONE_NUMBER,
-      text: payload.message,
-      ...payload // Allow other payload fields to be passed through
-    });
+  const gatewayPayload = {
+    to: payload.to || payload.recipient || DEFAULT_FROM,
+    from: payload.from || DEFAULT_FROM,
+    text: payload.text || payload.message,
+  };
 
-    return {
-      success: true,
-      messageId: message.data.id,
-      to: RECIPIENT_PHONE_NUMBER,
-      message: payload.message
-    };
-  } catch (error) {
-    console.error('Telnyx SMS error:', error);
-    throw new Error(`Failed to send SMS: ${error.message}`);
-  }
+  return callGateway('/sendSMS', gatewayPayload);
 }
 
 async function sendMMS(phoneNumbers, payload) {
@@ -67,58 +78,44 @@ async function sendMMS(phoneNumbers, payload) {
     throw new Error('Missing required field: phoneNumbers (must be a string or non-empty array)');
   }
 
-  if (!payload || !payload.message) {
-    throw new Error('Missing required field: message in payload');
+  if (!payload || (!payload.message && !payload.text)) {
+    throw new Error('Missing required field: message or text in payload');
   }
 
-  // Normalize phoneNumbers to array
   const toNumbers = Array.isArray(phoneNumbers) ? phoneNumbers : [phoneNumbers];
-  
-  // Validate all phone numbers are strings
-  if (!toNumbers.every(num => typeof num === 'string' && num.trim().length > 0)) {
+
+  if (!toNumbers.every((num) => typeof num === 'string' && num.trim().length > 0)) {
     throw new Error('All phone numbers must be non-empty strings');
   }
 
-  try {
-    // Send MMS to each phone number
-    const results = await Promise.all(
-      toNumbers.map(async (phoneNumber) => {
-        try {
-          const message = await telnyx.messages.create({
-            from: SENDING_PHONE_NUMBER,
-            to: phoneNumber.trim(),
-            text: payload.message,
-            media_urls: payload.media_urls || [], // MMS media URLs
-            ...payload // Allow other payload fields to be passed through
-          });
+  const results = await Promise.all(
+    toNumbers.map(async (phoneNumber) => {
+      try {
+        const gatewayPayload = {
+          to: phoneNumber.trim(),
+          from: payload.from || DEFAULT_FROM,
+          text: payload.text || payload.message,
+          mediaUrls: payload.mediaUrls || payload.media_urls || [],
+        };
+        const data = await callGateway('/sendMMS', gatewayPayload);
+        return { success: true, to: phoneNumber.trim(), ...data };
+      } catch (error) {
+        console.error(`Gateway MMS error for ${phoneNumber}:`, error);
+        return {
+          success: false,
+          to: phoneNumber.trim(),
+          error: error.message,
+          ...(error.gatewayResponse && { gatewayResponse: error.gatewayResponse }),
+        };
+      }
+    })
+  );
 
-          return {
-            success: true,
-            messageId: message.data.id,
-            to: phoneNumber.trim(),
-            message: payload.message
-          };
-        } catch (error) {
-          console.error(`Telnyx MMS error for ${phoneNumber}:`, error);
-          return {
-            success: false,
-            to: phoneNumber.trim(),
-            error: error.message
-          };
-        }
-      })
-    );
-
-    return {
-      success: true,
-      results: results,
-      totalSent: results.filter(r => r.success).length,
-      totalFailed: results.filter(r => !r.success).length
-    };
-  } catch (error) {
-    console.error('Telnyx MMS error:', error);
-    throw new Error(`Failed to send MMS: ${error.message}`);
-  }
+  return {
+    results,
+    totalSent: results.filter((r) => r.success).length,
+    totalFailed: results.filter((r) => !r.success).length,
+  };
 }
 
 module.exports = { processTelnyxEvent, sendSMS, sendMMS };

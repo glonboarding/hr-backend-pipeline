@@ -17,20 +17,19 @@ async function handleSendSMS(req, res) {
     const { payload } = req.body;
 
     if (!payload) {
-      return res.status(400).json({ 
-        ok: false, 
-        error: 'Missing required field: payload' 
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing required field: payload',
       });
     }
 
     const result = await sendSMS(payload);
-    return res.status(200).json({ ok: true, result });
+    return res.status(200).json(result);
   } catch (err) {
     console.error('Send SMS error:', err);
-    return res.status(500).json({ 
-      ok: false, 
-      error: err.message 
-    });
+    const status = err.status || 500;
+    const body = err.gatewayResponse || { ok: false, error: err.message };
+    return res.status(status).json(body);
   }
 }
 
@@ -39,27 +38,26 @@ async function handleSendMMS(req, res) {
     const { phoneNumbers, payload } = req.body;
 
     if (!phoneNumbers) {
-      return res.status(400).json({ 
-        ok: false, 
-        error: 'Missing required field: phoneNumbers' 
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing required field: phoneNumbers',
       });
     }
 
     if (!payload) {
-      return res.status(400).json({ 
-        ok: false, 
-        error: 'Missing required field: payload' 
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing required field: payload',
       });
     }
 
     const result = await sendMMS(phoneNumbers, payload);
-    return res.status(200).json({ ok: true, result });
+    return res.status(200).json(result);
   } catch (err) {
     console.error('Send MMS error:', err);
-    return res.status(500).json({ 
-      ok: false, 
-      error: err.message 
-    });
+    const status = err.status || 500;
+    const body = err.gatewayResponse || { ok: false, error: err.message };
+    return res.status(status).json(body);
   }
 }
 
