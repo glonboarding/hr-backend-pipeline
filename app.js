@@ -23,6 +23,14 @@ app.get('/', (req, res) => {
   });
 });
 
+// Debug route to test telnyx routing
+app.get('/api/telnyx/test', (req, res) => {
+  res.json({
+    message: 'Telnyx routes are working',
+    path: req.path
+  });
+});
+
 // API Routes
 app.use('/api/telnyx', telnyxRoutes);
 
