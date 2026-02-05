@@ -2,6 +2,12 @@
 
 A Node.js Express backend server with multiple routes for HR management.
 
+## Architecture
+
+SMS/MMS requests are proxied through the Express server to an API Gateway and Lambda, which calls Telnyx—keeping the Telnyx API key secure and never exposed to the client.
+
+![Backend proxy flow: Client → Express server → API Gateway → Lambda → Telnyx](backend_proxy.jpg)
+
 ## Features
 
 - Express.js RESTful API
