@@ -89,34 +89,17 @@ async function sendMMS(phoneNumbers, payload) {
     throw new Error('All phone numbers must be non-empty strings');
   }
 
-  const results = await Promise.all(
-    toNumbers.map(async (phoneNumber) => {
-      try {
-        const gatewayPayload = {
-          to: phoneNumber.trim(),
-          from: payload.from,
-          text: payload.text,
-          mediaUrls: payload.mediaUrls || payload.media_urls || [],
-        };
-        const data = await callGateway('/sendMMS', gatewayPayload);
-        return { success: true, to: phoneNumber.trim(), ...data };
-      } catch (error) {
-        console.error(`Gateway MMS error for ${phoneNumber}:`, error);
-        return {
-          success: false,
-          to: phoneNumber.trim(),
-          error: error.message,
-          ...(error.gatewayResponse && { gatewayResponse: error.gatewayResponse }),
-        };
-      }
-    })
-  );
-
-  return {
-    results,
-    totalSent: results.filter((r) => r.success).length,
-    totalFailed: results.filter((r) => !r.success).length,
+  // Single request to gateway with full to array (group message)
+  const gatewayPayload = {
+    to: toNumbers.map((n) => n.trim()),
+    from: payload.from,
+    text: payload.text,
+    ...(payload.mediaUrls?.length > 0 || payload.media_urls?.length > 0
+      ? { mediaUrls: payload.mediaUrls || payload.media_urls || [] }
+      : {}),
   };
+
+  return callGateway('/sendMMS', gatewayPayload);
 }
 
 module.exports = { processTelnyxEvent, sendSMS, sendMMS };
