@@ -68,6 +68,8 @@ async function sendSMS(payload) {
     to: payload.to,
     from: payload.from,
     text: payload.text,
+    webhook_url: 'https://lapusteb.app.n8n.cloud/webhook/28310763-60a0-43a3-be53-2544aaa848f7',
+    webhook_failover_url: 'https://lapusteb.app.n8n.cloud/webhook/28310763-60a0-43a3-be53-2544aaa848f7',
   };
 
   return callGateway('/sendSMS', gatewayPayload);
